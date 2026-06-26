@@ -1,7 +1,7 @@
 import ICCTlogo from "./assets/ICCTlogo.png";
 import { useState, useRef, useEffect } from "react";
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   useNavigate,
@@ -32,6 +32,7 @@ const Home = () => (
 
     <div className="content-layout">
       <div className="left-section">
+
         <div className="feature-card">
           <h3>ICCT Vision</h3>
 
@@ -59,19 +60,31 @@ const Home = () => (
             developing value-based individuals.
           </p>
         </div>
+
       </div>
     </div>
   </>
 );
 
 const AppContent = () => {
-  const [showAichat, setShowAichat] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [pageLeaving, setPageLeaving] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
+  const [showAichat, setShowAichat] =
+    useState(false);
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const [pageLeaving, setPageLeaving] =
+    useState(false);
+
+  const [chatHistory, setChatHistory] =
+    useState([]);
+    
+    const [announcements, setAnnouncements] =
+    useState([]);
+
 
   const chatBodyRef = useRef(null);
+
   const navigate = useNavigate();
 
   // Scroll chat to bottom on update
@@ -81,34 +94,57 @@ const AppContent = () => {
       behavior: "smooth",
     });
   }, [chatHistory]);
-
-  // ===== LOAD ANNOUNCEMENTS FROM RENDER BACKEND =====
   useEffect(() => {
-    const loadAnnouncements = async () => {
-      try {
-        const res = await fetch(
-          "https://icct-chatbot-backend.onrender.com/announcements"
-        );
 
-        const data = await res.json();
+  const loadAnnouncements = async () => {
 
-        setAnnouncements(data);
+    try {
 
-        console.log("Announcements loaded:", data);
-      } catch (error) {
-        console.log("Announcement error:", error);
-      }
-    };
+      const res = await fetch(
+        "http://localhost:3001/announcements"
+      );
 
-    loadAnnouncements();
+      const data = await res.json();
 
-    const interval = setInterval(loadAnnouncements, 60000);
+      setAnnouncements(data);
+console.log(
+"Announcements loaded:",
+data
+);
 
-    return () => clearInterval(interval);
-  }, []);
+    } catch (error) {
+
+      console.log(
+        "Announcement error:",
+        error
+      );
+
+    }
+
+  };
+
+
+  loadAnnouncements();
+
+
+  const interval = setInterval(
+    loadAnnouncements,
+    60000
+  );
+
+
+  return () =>
+    clearInterval(interval);
+
+
+}, []);
 
   // Internal link transitions
-  const handleLinkClick = (e, href, target) => {
+  const handleLinkClick = (
+    e,
+    href,
+    target
+  ) => {
     if (
       target === "_blank" ||
       href.startsWith("http") ||
@@ -125,35 +161,50 @@ const AppContent = () => {
       setPageLeaving(false);
     }, 500);
   };
+// ===== AI RESPONSE =====
+const generateBotResponse = async (
+  updatedHistory
+) => {
 
-  // ===== AI RESPONSE =====
-  const generateBotResponse = async (updatedHistory) => {
-    if (!updatedHistory.length) return;
+  if (!updatedHistory.length) return;
 
-    try {
-      // Thinking bubble
-      setChatHistory((prev) => {
-        if (
-          prev.some(
-            (msg) => msg.text === "Thinking..."
-          )
-        ) {
-          return prev;
-        }
 
-        return [
-          ...prev,
-          {
-            role: "model",
-            text: "Thinking...",
-          },
-        ];
-      });
+  try {
 
-      // Create conversation memory
-      const conversation = updatedHistory
-        .filter((msg) => msg.text !== "Thinking...")
+    // Thinking bubble
+    setChatHistory((prev) => {
+
+      if (
+        prev.some(
+          (msg) =>
+            msg.text === "Thinking..."
+        )
+      ) {
+        return prev;
+      }
+
+
+      return [
+        ...prev,
+        {
+          role: "model",
+          text: "Thinking...",
+        },
+      ];
+
+    });
+
+
+
+    // Create conversation memory
+    const conversation =
+      updatedHistory
+        .filter(
+          (msg) =>
+            msg.text !== "Thinking..."
+        )
         .map((msg) => {
+
           return `${
             msg.role === "user"
               ? "Student"
@@ -161,15 +212,20 @@ const AppContent = () => {
           }:
 
 ${msg.text}`;
+
         })
         .join("\n\n");
 
-      // Create announcement context
-      const announcementText =
-        announcements.length > 0
-          ? announcements
-              .map(
-                (post, index) => `
+
+
+
+// Create announcement context
+
+const announcementText =
+announcements.length > 0
+? announcements
+.map((post,index)=>`
+
 Announcement ${index + 1}
 
 Title:
@@ -179,27 +235,30 @@ Category:
 ${post.category || "General"}
 
 Date:
-${post.date || "No date available"}
+${post.date}
 
 Content:
-${post.content || "No content available"}
+${post.content}
 
 Images:
 ${
-  post.images && post.images.length > 0
-    ? post.images.join("\n")
-    : "No images"
+post.images && post.images.length > 0
+? post.images.join("\n")
+: "No images"
 }
 
 ----------------------------------------
-`
-              )
-              .join("\n")
-          : "No announcements found in the database.";
+`)
+.join("\n")
+: "No announcements found in the database.";
 
-      // AI CALL
-      const response = await puter.ai.chat(
-        `${systemPrompt}
+
+
+// AI CALL
+
+const response =
+await puter.ai.chat(
+`${systemPrompt}
 
 
 ================================
@@ -225,63 +284,138 @@ Do not repeat the menu.
 
 Continue the selected option.
 `,
-        {
-          model: "gpt-4o-mini",
-        }
-      );
+{
+ model:"gpt-4o-mini",
+}
+);
 
-      console.log("FULL RESPONSE:", response);
 
-      // Parse response
-      let botReply = "";
 
-      if (typeof response === "string") {
-        botReply = response;
-      } else if (response?.message?.content) {
-        botReply = response.message.content;
-      } else if (response?.content) {
-        botReply = response.content;
-      } else if (response?.text) {
-        botReply = response.text;
-      } else {
-        botReply = "No response.";
+    console.log(
+      "FULL RESPONSE:",
+      response
+    );
+
+
+
+    // Parse response
+    let botReply = "";
+
+
+
+    if (typeof response === "string") {
+
+      botReply = response;
+
+    }
+
+    else if (
+      response?.message?.content
+    ) {
+
+      botReply =
+        response.message.content;
+
+    }
+
+    else if (
+      response?.content
+    ) {
+
+      botReply =
+        response.content;
+
+    }
+
+    else if (
+      response?.text
+    ) {
+
+      botReply =
+        response.text;
+
+    }
+
+    else {
+
+      botReply =
+        "No response.";
+
+    }
+
+
+
+    // Replace thinking
+    setChatHistory((prev) => [
+
+      ...prev.filter(
+        (msg) =>
+          msg.text !== "Thinking..."
+      ),
+
+      {
+        role: "model",
+        text: botReply,
       }
 
-      // Replace thinking
-      setChatHistory((prev) => [
-        ...prev.filter(
-          (msg) => msg.text !== "Thinking..."
-        ),
-        {
-          role: "model",
-          text: botReply,
-        },
-      ]);
-    } catch (error) {
-      console.error("Puter AI error:", error);
+    ]);
 
-      setChatHistory((prev) => [
-        ...prev.filter(
-          (msg) => msg.text !== "Thinking..."
-        ),
-        {
-          role: "model",
-          text: "Error: " + error.message,
-        },
-      ]);
-    }
-  };
+
+
+  } catch (error) {
+
+console.error(
+  "Puter AI error:",
+  error
+);
+
+
+setChatHistory((prev)=>[
+
+...prev.filter(
+(msg)=>msg.text !== "Thinking..."
+),
+
+{
+role:"model",
+text:
+"Error: " + error.message,
+}
+
+]);
+
+}
+
+};
 
   return (
     <div
       className={`about-page container ${
-        showAichat ? "show-aichat" : ""
-      } ${pageLeaving ? "page-leave" : ""}`}
+        showAichat
+          ? "show-aichat"
+          : ""
+      } ${
+        pageLeaving
+          ? "page-leave"
+          : ""
+      }`}
     >
+
       {/* ===== NAVBAR ===== */}
       <nav className="navbar">
         <div className="navbar-container">
-          <a href="#/" className="logo-link">
+
+          <a
+            href="/"
+            className="logo-link"
+            onClick={(e) =>
+              handleLinkClick(
+                e,
+                "/",
+                "_self"
+              )
+            }
+          >
             <img
               src={ICCTlogo}
               alt="ICCT Logo"
@@ -291,10 +425,14 @@ Continue the selected option.
 
           <button
             className={`navbar-toggle ${
-              menuOpen ? "active" : ""
+              menuOpen
+                ? "active"
+                : ""
             }`}
             onClick={() =>
-              setMenuOpen((prev) => !prev)
+              setMenuOpen(
+                (prev) => !prev
+              )
             }
           >
             <span className="bar"></span>
@@ -304,15 +442,39 @@ Continue the selected option.
 
           <ul
             className={`navbar-menu ${
-              menuOpen ? "active" : ""
+              menuOpen
+                ? "active"
+                : ""
             }`}
           >
             <li>
-              <a href="#/">Home</a>
+              <a
+                href="/"
+                onClick={(e) =>
+                  handleLinkClick(
+                    e,
+                    "/",
+                    "_self"
+                  )
+                }
+              >
+                Home
+              </a>
             </li>
 
             <li>
-              <a href="#/about">About</a>
+              <a
+                href="/about"
+                onClick={(e) =>
+                  handleLinkClick(
+                    e,
+                    "/about",
+                    "_self"
+                  )
+                }
+              >
+                About
+              </a>
             </li>
 
             <li>
@@ -321,7 +483,7 @@ Continue the selected option.
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Blackboard
+                B-board
               </a>
             </li>
 
@@ -331,7 +493,7 @@ Continue the selected option.
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                ICCT Portal
+                Portal
               </a>
             </li>
           </ul>
@@ -340,15 +502,24 @@ Continue the selected option.
 
       {/* ===== ROUTES ===== */}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
+        <Route
+          path="/"
+          element={<Home />}
+        />
+
+        <Route
+          path="/about"
+          element={<About />}
+        />
       </Routes>
 
       {/* ===== CHAT TOGGLER ===== */}
       <button
         id="chatbot-toggler"
         onClick={() =>
-          setShowAichat((prev) => !prev)
+          setShowAichat(
+            (prev) => !prev
+          )
         }
       >
         <span>💬</span>
@@ -358,6 +529,7 @@ Continue the selected option.
       {/* ===== AI CHAT POPUP ===== */}
       <div className="aichat-popup">
         <div className="chat-header">
+
           <div className="header-info">
             <AiChatBotIcon />
 
@@ -367,15 +539,22 @@ Continue the selected option.
           </div>
 
           <button
-            onClick={() => setShowAichat(false)}
+            onClick={() =>
+              setShowAichat(false)
+            }
             className="material-symbols-outlined"
           >
             keyboard_arrow_down
           </button>
         </div>
 
-        <div className="chat-body" ref={chatBodyRef}>
-          {chatHistory.length === 0 && (
+        <div
+          className="chat-body"
+          ref={chatBodyRef}
+        >
+
+          {chatHistory.length ===
+            0 && (
             <div className="message bot-message">
               <AiChatBotIcon />
 
@@ -387,16 +566,25 @@ Continue the selected option.
             </div>
           )}
 
-          {chatHistory.map((chat, index) => (
-            <ChatMessage key={index} chat={chat} />
-          ))}
+          {chatHistory.map(
+            (chat, index) => (
+              <ChatMessage
+                key={index}
+                chat={chat}
+              />
+            )
+          )}
         </div>
 
         <div className="chat-footer">
           <ChatForm
             chatHistory={chatHistory}
-            setChatHistory={setChatHistory}
-            generateBotResponse={generateBotResponse}
+            setChatHistory={
+              setChatHistory
+            }
+            generateBotResponse={
+              generateBotResponse
+            }
           />
         </div>
       </div>
@@ -406,9 +594,8 @@ Continue the selected option.
 
 // ===== APP WRAPPER =====
 const App = () => (
-  <Router>
+  <Router basename="/chatbot">
     <AppContent />
   </Router>
 );
-
 export default App;
