@@ -1,22 +1,16 @@
 import { useState } from "react";
 import AiChatBotIcon from "./AiChatBotIcon";
+import ReactMarkdown from "react-markdown";
 
 const ChatMessage = ({ chat }) => {
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const imageUrlRegex =
-    /(https?:\/\/[^\s)]+?\.(?:png|jpg|jpeg|webp|gif)(?:\?[^\s)]*)?)/i;
-
-  const imageMatch =
-    typeof chat.text === "string"
-      ? chat.text.match(imageUrlRegex)
-      : null;
-
-  const imageUrl = imageMatch ? imageMatch[0] : null;
-
-  const cleanText = imageUrl
-    ? chat.text.replace(imageUrl, "").replace("[View Image]()", "").trim()
-    : chat.text || "";
+  const getSrc = (img) =>
+    typeof img === "string"
+      ? img
+      : img instanceof File
+      ? URL.createObjectURL(img)
+      : "";
 
   return (
     <>
@@ -28,13 +22,18 @@ const ChatMessage = ({ chat }) => {
         {chat.role === "model" && <AiChatBotIcon />}
 
         <div className="message-text">
-          <p>{cleanText}</p>
 
-          {imageUrl && (
+          {/* TEXT */}
+          <ReactMarkdown>
+            {chat.text || ""}
+          </ReactMarkdown>
+
+          {/* IMAGE */}
+          {chat.image && (
             <img
-              src={imageUrl}
-              alt="announcement"
-              onClick={() => setSelectedImage(imageUrl)}
+              src={getSrc(chat.image)}
+              alt="upload"
+              onClick={() => setSelectedImage(getSrc(chat.image))}
               style={{
                 maxWidth: "100%",
                 maxHeight: "220px",
@@ -44,14 +43,13 @@ const ChatMessage = ({ chat }) => {
               }}
             />
           )}
+
         </div>
       </div>
 
+      {/* MODAL */}
       {selectedImage && (
-        <div
-          className="image-modal"
-          onClick={() => setSelectedImage(null)}
-        >
+        <div className="image-modal" onClick={() => setSelectedImage(null)}>
           <img src={selectedImage} alt="full" />
         </div>
       )}
